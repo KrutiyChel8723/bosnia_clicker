@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Bosnian Clicker — Lite</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;width:100%}
+body{font-family:Arial,sans-serif;color:#fff;text-align:center;background:#07115a url('background.png') center center / cover no-repeat;-webkit-user-select:none;user-select:none}
+.screen{min-height:100vh;padding:16px 10px;background:rgba(0,0,0,.30)}
+h1{font-size:25px;margin:12px 0 12px;text-shadow:1px 2px #000}
+.score{font-size:49px;font-weight:bold;margin:10px 0 18px;text-shadow:1px 2px #000}
+button{font-family:Arial,sans-serif;color:#fff;background:#062c89;border:2px solid #fff;border-radius:6px;font-size:18px;padding:13px 12px;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#click{width:180px;height:180px;border-radius:50%;border:4px solid white;background:#e0b900;color:#101b4c;font-size:34px;font-weight:bold;touch-action:none}
+#click.pressed{background:#ffe254}
+.controls{max-width:310px;margin:20px auto 0}
+.controls button{display:block;width:100%;margin:10px 0;min-height:52px}
+#track{font-size:15px;min-height:23px;margin-top:12px;text-shadow:1px 1px #000}
+.note{font-size:12px;margin-top:18px;text-shadow:1px 1px #000}
+</style>
+</head>
+<body>
+<div class="screen">
+<h1>BOSNIAN CLICKER 🇧🇦</h1>
+<div class="score" id="score">0</div>
+<button id="click" type="button">+1</button>
+<div class="controls">
+<button id="music" type="button">♫ Музика: ВИМК.</button>
+<button id="next" type="button">▶ Наступний трек</button>
+<div id="track"></div>
+</div>
+<div class="note">Офлайн • Очки зберігаються</div>
+</div>
+<audio id="player" preload="none" loop></audio>
+<script>
+(function(){
+'use strict';
+var tracks=[
+ {file:'music2.mp3',name:'Crna dvojka'},
+ {file:'music3.mp3',name:'Drimba n Bass'},
+ {file:'music4.mp3',name:'Bosanska Artiljerija'}
+];
+var score=0;
+try{score=parseInt(localStorage.getItem('bosnian_score'),10)||0;}catch(e){}
+var scoreEl=document.getElementById('score');
+var clickBtn=document.getElementById('click');
+var musicBtn=document.getElementById('music');
+var trackEl=document.getElementById('track');
+var audio=document.getElementById('player');
+var trackIndex=0,playing=false,dirty=false,pressed=false,lastTouch=0;
+scoreEl.textContent=String(score);
+function save(){if(!dirty)return;try{localStorage.setItem('bosnian_score',String(score));dirty=false;}catch(e){}}
+function addPoint(){score++;scoreEl.textContent=String(score);dirty=true;}
+// touchstart registers immediately, instead of waiting for delayed synthetic clicks.
+// Prevent the follow-up synthetic click, which would otherwise double-count.
+clickBtn.addEventListener('touchstart',function(e){
+ if(e.cancelable)e.preventDefault();
+ lastTouch=Date.now();
+ pressed=true;clickBtn.className='pressed';
+ addPoint();
+},false);
+function release(){pressed=false;clickBtn.className='';}
+clickBtn.addEventListener('touchend',function(e){if(e.cancelable)e.preventDefault();release();},false);
+clickBtn.addEventListener('touchcancel',release,false);
+clickBtn.addEventListener('click',function(e){
+ if(Date.now()-lastTouch<700){e.preventDefault();return;}
+ addPoint();
+},false);
+// Do not write to storage on every tap: storage writes may stall older browsers.
+setInterval(save,2000);
+window.addEventListener('pagehide',save,false);
+window.addEventListener('beforeunload',save,false);
+document.addEventListener('visibilitychange',function(){if(document.hidden)save();},false);
+function renderMusic(){musicBtn.textContent='♫ Музика: '+(playing?'УВІМК.':'ВИМК.');trackEl.textContent=tracks[trackIndex].name;}
+function loadTrack(){audio.src=tracks[trackIndex].file;audio.load();}
+function startMusic(){
+ playing=true;renderMusic();
+ try{
+  var p=audio.play();
+  if(p&&typeof p.catch==='function')p.catch(function(){playing=false;renderMusic();alert('Не вдалося відтворити музику.');});
+ }catch(e){playing=false;renderMusic();}
+}
+musicBtn.addEventListener('click',function(){
+ if(playing){audio.pause();playing=false;renderMusic();}
+ else{if(!audio.getAttribute('src'))loadTrack();startMusic();}
+},false);
+document.getElementById('next').addEventListener('click',function(){
+ var wasPlaying=playing;audio.pause();trackIndex=(trackIndex+1)%tracks.length;loadTrack();
+ if(wasPlaying)startMusic();else renderMusic();
+},false);
+renderMusic();
+})();
+</script>
+</body>
+</html>
